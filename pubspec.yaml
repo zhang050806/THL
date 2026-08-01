@@ -1,0 +1,31 @@
+# Flutter 项目配置 — 依赖、资源与构建元数据
+name: xiaozhi_app
+description: 小智桌面智能体控制应用
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:     # 国际化/多语言支持
+    sdk: flutter
+  cupertino_icons: ^1.0.8     # iOS 风格图标
+  shared_preferences: ^2.2.0  # 本地键值存储
+  image_picker: ^1.0.7        # 图片选择器
+  provider: ^6.1.2            # 状态管理
+  http: ^1.2.0                # HTTP 网络请求
+
+dev_dependencies:
+  flutter_test:               # Flutter 测试框架
+    sdk: flutter
+  flutter_lints: ^6.0.0       # Lint 规则
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icon/app_icon.jpg
+    - assets/manual_pages/        # 说明文档页面资源
+    - assets/manual_pages_zh/     # 中文说明文档页面资源

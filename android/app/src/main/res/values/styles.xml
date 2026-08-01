@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 主题样式 — LaunchTheme 启动页 + NormalTheme 常规页 -->
+<resources>
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar"> <!-- 启动页：白色背景，无标题栏 -->
+        <item name="android:windowBackground">@drawable/launch_background</item>
+    </style>
+    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar"> <!-- 常规页：浅色背景，无标题栏 -->
+        <item name="android:windowBackground">?android:colorBackground</item>
+    </style>
+</resources>

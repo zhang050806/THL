@@ -1,0 +1,8 @@
+# Flutter 静态分析配置 — 继承 flutter_lints 规则集
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    prefer_const_constructors: true        # 建议使用 const 构造函数
+    prefer_const_declarations: true        # 建议使用 const 声明
+    avoid_print: false                     # 允许 print 调试输出
