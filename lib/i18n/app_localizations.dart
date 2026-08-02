@@ -35,6 +35,7 @@ class AppLocalizations {
     'createAgentPageContent': '创建智能体页面',
     // 连接页
     'connectTitle': '连接',
+    'connectDevice': '连接设备',
     'connectPageContent': '连接页面',
     'connectServerConfig': '服务器配置',
     'connectServerHint': 'ws://192.168.1.100:8000/xiaozhi/v1/',
@@ -335,13 +336,14 @@ class AppLocalizations {
     'alarmSelectTime': '选择时间',
     'alarmSelectRepeat': '选择重复',
     'alarmSelectDays': '选择日期',
-    'alarmRepeatOnce': '单次',
+    'alarmRepeatOnce': '仅今天',
     'alarmRepeatWeekday': '仅工作日（周一至周五）',
     'alarmRepeatWeekdayShort': '仅工作日',
     'alarmRepeatCustom': '自定义',
     'alarmNext': '下一步',
     'alarmPrev': '上一步',
     'alarmConfirm': '确定',
+    'alarmSave': '保存',
     'alarmCancel': '取消',
     'alarmDaySeparator': '、',
     'alarmMonday': '周一',
@@ -369,6 +371,9 @@ class AppLocalizations {
     'alarmSyncFailed': '同步失败，请检查蓝牙连接',
     'alarmBleNotConnected': '设备未连接，请先连接蓝牙设备',
     'alarmMaxReached': '已达到设备最大数量（20条），请先删除不用的闹钟',
+    'alarmTimePassed': '仅今天闹钟时间已过，请重新设置',
+    'alarmTimePassedTitle': '提示',
+    'alarmTimePassedOk': '知道了',
   };
 
   static const Map<String, String> _en = {
@@ -388,6 +393,7 @@ class AppLocalizations {
     'createAgentPageContent': 'Create Agent Page',
     // Connect page
     'connectTitle': 'Connect',
+    'connectDevice': 'Connect Device',
     'connectPageContent': 'Connect Page',
     'connectServerConfig': 'Server Config',
     'connectServerHint': 'ws://192.168.1.100:8000/xiaozhi/v1/',
@@ -691,13 +697,14 @@ class AppLocalizations {
     'alarmSelectTime': 'Select Time',
     'alarmSelectRepeat': 'Select Repeat',
     'alarmSelectDays': 'Select Days',
-    'alarmRepeatOnce': 'Once',
+    'alarmRepeatOnce': 'Today Only',
     'alarmRepeatWeekday': 'Weekdays (Mon–Fri)',
     'alarmRepeatWeekdayShort': 'Weekdays',
     'alarmRepeatCustom': 'Custom',
     'alarmNext': 'Next',
     'alarmPrev': 'Previous',
     'alarmConfirm': 'Confirm',
+    'alarmSave': 'Save',
     'alarmCancel': 'Cancel',
     'alarmDaySeparator': ', ',
     'alarmMonday': 'Monday',
@@ -725,6 +732,9 @@ class AppLocalizations {
     'alarmSyncFailed': 'Sync failed. Please check Bluetooth connection',
     'alarmBleNotConnected': 'Device not connected. Please connect via Bluetooth first',
     'alarmMaxReached': 'Maximum alarms reached (20). Please delete unused alarms first',
+    'alarmTimePassed': 'Today Only alarm time has passed, please reset',
+    'alarmTimePassedTitle': 'Notice',
+    'alarmTimePassedOk': 'OK',
   };
 
   Map<String, String> get _map => isEnglish ? _en : _zh;
@@ -748,6 +758,7 @@ class AppLocalizations {
 
   // 连接页
   String get connectTitle => _t('connectTitle');
+  String get connectDevice => _t('connectDevice');
   String get connectPageContent => _t('connectPageContent');
   String get connectServerConfig => _t('connectServerConfig');
   String get connectServerHint => _t('connectServerHint');
@@ -920,7 +931,11 @@ class AppLocalizations {
   String get alarmNext => _t('alarmNext');
   String get alarmPrev => _t('alarmPrev');
   String get alarmConfirm => _t('alarmConfirm');
+  String get alarmSave => _t('alarmSave');
   String get alarmCancel => _t('alarmCancel');
+  String get alarmTimePassed => _t('alarmTimePassed');
+  String get alarmTimePassedTitle => _t('alarmTimePassedTitle');
+  String get alarmTimePassedOk => _t('alarmTimePassedOk');
   String get alarmDaySeparator => _t('alarmDaySeparator');
   String get alarmMonday => _t('alarmMonday');
   String get alarmTuesday => _t('alarmTuesday');

@@ -9,10 +9,10 @@ import 'blank_page.dart';
 import 'device_detail_page.dart';
 import 'general_settings_page.dart';
 import 'help_feedback_page.dart';
-import 'order_center_page.dart';
 import 'profile_detail_page.dart';
 import 'firmware_update_page.dart';
 import 'notification_page.dart';
+import 'connect_device_page.dart';
 
 /// [ProfilePage] 「我的」页面。
 /// 展示用户信息卡片、设备列表、AI 服务入口、系统设置等模块。
@@ -127,12 +127,24 @@ class _ProfilePageState extends State<ProfilePage> {
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
                 children: [
                   _buildProfileCard(l10n, isDark),
+                  _buildSectionTitle(l10n.connectTitle, isDark),
+                  _card(
+                    child: _listItem(
+                      Icons.bluetooth,
+                      l10n.connectDevice,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ConnectDevicePage(),
+                        ),
+                      ),
+                      isDark: isDark,
+                    ),
+                  ),
                   _buildSectionTitle(l10n.devicesSection, isDark),
                   _buildDeviceSection(l10n, isDark),
                   _buildSectionTitle(l10n.aiXiaozhi, isDark),
                   _buildAISection(l10n, isDark),
-                  _buildSectionTitle(l10n.servicesSection, isDark),
-                  _buildServiceSection(l10n, isDark),
                   _buildSectionTitle(l10n.settingsSection, isDark),
                   _buildSettingsSection(l10n, isDark),
                   const SizedBox(height: 16),
@@ -475,16 +487,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
         ],
       ),
-    );
-  }
-
-  /// 构建服务分区：订单中心（带副标题）。
-  Widget _buildServiceSection(AppLocalizations l10n, bool isDark) {
-    return _card(
-      child: _listItem(Icons.receipt_long_outlined, l10n.purchase,
-          () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const OrderCenterPage())),
-          isDark: isDark),
     );
   }
 

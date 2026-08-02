@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'i18n/app_localizations.dart';
 import 'theme/theme_manager.dart';
 import 'pages/home_page.dart';
-import 'pages/connect_page.dart';
 import 'pages/profile_page.dart';
 import 'pages/splash_page.dart';
 
@@ -124,7 +123,7 @@ class MainScreen extends StatefulWidget {
 /// [MainScreen] 状态管理类。
 /// 维护当前选中的 Tab 索引并渲染对应页面。
 class _MainScreenState extends State<MainScreen> {
-  /// 当前选中的导航栏索引：0=首页, 1=连接, 2=我的
+  /// 当前选中的导航栏索引：0=首页, 1=我的
   int _currentIndex = 0;
 
   @override
@@ -134,10 +133,9 @@ class _MainScreenState extends State<MainScreen> {
     const unselectedColor = Color(0xFFA0AEC0);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // 底部 Tab 对应的三个主页面
+    // 底部 Tab 对应的两个主页面
     final List<Widget> pages = [
       HomePage(),
-      ConnectPage(),
       const ProfilePage(),
     ];
 
@@ -153,7 +151,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   /// 构建底部导航栏。
-  /// 采用毛玻璃效果（BackdropFilter），三个导航项均分空间。
+  /// 采用毛玻璃效果（BackdropFilter），两个导航项均分空间。
   Widget _buildNavBar(
       AppLocalizations l10n, Color selected, Color unselected, bool isDark) {
     return Container(
@@ -181,8 +179,7 @@ class _MainScreenState extends State<MainScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _navItem(0, Icons.cloud_outlined, Icons.cloud, l10n.navHome, selected, unselected),
-              _navItem(1, Icons.language_outlined, Icons.language, l10n.navConnect, selected, unselected),
-              _navItem(2, Icons.settings_outlined, Icons.settings, l10n.navProfile, selected, unselected),
+              _navItem(1, Icons.settings_outlined, Icons.settings, l10n.navProfile, selected, unselected),
             ],
           ),
         ),

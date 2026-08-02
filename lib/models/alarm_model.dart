@@ -2,64 +2,6 @@
 /// 与设备端 MCU 通过 BLE 交换的闹钟数据格式保持一致。
 
 // ============================================================
-//  闹钟触发动作枚举
-// ============================================================
-
-/// 闹钟触发时设备执行的动作类型。
-enum AlarmAction {
-  /// RGB 氛围灯亮起
-  rgbLight(0x01),
-
-  /// 启动无线充快充
-  wirelessFastCharge(0x02),
-
-  /// 蜂鸣提醒
-  buzzer(0x03),
-
-  /// 组合动作（灯光 + 快充 + 蜂鸣）
-  combo(0x04);
-
-  final int code;
-  const AlarmAction(this.code);
-
-  /// 从协议字节解析动作类型。
-  factory AlarmAction.fromCode(int code) {
-    for (final v in AlarmAction.values) {
-      if (v.code == code) return v;
-    }
-    return AlarmAction.buzzer; // 未知时默认蜂鸣
-  }
-
-  /// 动作的中文名称。
-  String get nameZh {
-    switch (this) {
-      case AlarmAction.rgbLight:
-        return 'RGB 氛围灯';
-      case AlarmAction.wirelessFastCharge:
-        return '无线充快充';
-      case AlarmAction.buzzer:
-        return '蜂鸣提醒';
-      case AlarmAction.combo:
-        return '组合动作';
-    }
-  }
-
-  /// 动作的英文名称。
-  String get nameEn {
-    switch (this) {
-      case AlarmAction.rgbLight:
-        return 'RGB Light';
-      case AlarmAction.wirelessFastCharge:
-        return 'Fast Charge';
-      case AlarmAction.buzzer:
-        return 'Buzzer';
-      case AlarmAction.combo:
-        return 'Combo';
-    }
-  }
-}
-
-// ============================================================
 //  闹钟数据模型
 // ============================================================
 
@@ -74,7 +16,7 @@ enum AlarmAction {
 /// - [minute]: 0~59
 /// - [repeatMask]: 位掩码，bit0(LSB)=周一, bit1=周二, ..., bit6=周日
 ///   例：工作日(周一到周五) = 0b00011111 = 0x1F
-/// - [action]: 触发动作类型，见 [AlarmAction]
+/// - [actionMask]: 触发动作位掩码，bit0=蜂鸣, bit1=灯光, bit2=快充
 class AlarmModel {
   /// 闹钟ID（0~19）
   int alarmId;
@@ -92,8 +34,8 @@ class AlarmModel {
   /// 例：工作日 0x1F，周末 0x60，每天 0x7F，单次 0x00
   int repeatMask;
 
-  /// 触发动作
-  AlarmAction action;
+  /// 触发动作位掩码（bit0=蜂鸣, bit1=灯光, bit2=快充）。新闹钟默认 0x00（无动作），旧数据保留原值兼容。
+  int actionMask;
 
   AlarmModel({
     required this.alarmId,
@@ -101,7 +43,7 @@ class AlarmModel {
     required this.hour,
     required this.minute,
     this.repeatMask = 0x00,
-    this.action = AlarmAction.buzzer,
+    this.actionMask = 0x00,
   });
 
   // ========================
@@ -147,7 +89,7 @@ class AlarmModel {
       hour & 0xFF,
       minute & 0xFF,
       repeatMask & 0xFF,
-      action.code & 0xFF,
+      actionMask & 0xFF,
     ];
   }
 
@@ -162,7 +104,7 @@ class AlarmModel {
       hour: bytes[2],
       minute: bytes[3],
       repeatMask: bytes[4],
-      action: AlarmAction.fromCode(bytes[5]),
+      actionMask: bytes[5],
     );
   }
 
@@ -177,18 +119,19 @@ class AlarmModel {
         'hour': hour,
         'minute': minute,
         'repeatMask': repeatMask,
-        'action': action.code,
+        'action': actionMask,
       };
 
   /// 从 JSON Map 反序列化。
   factory AlarmModel.fromJson(Map<String, dynamic> json) {
+    final rawAction = json['action'] as int? ?? 0x00;
     return AlarmModel(
       alarmId: json['alarmId'] as int? ?? 0,
       enabled: json['enabled'] as bool? ?? true,
       hour: json['hour'] as int,
       minute: json['minute'] as int,
       repeatMask: json['repeatMask'] as int? ?? 0x00,
-      action: AlarmAction.fromCode(json['action'] as int? ?? 0x03),
+      actionMask: rawAction,
     );
   }
 
@@ -227,5 +170,5 @@ class AlarmModel {
   String toString() =>
       'AlarmModel(id=$alarmId, ${enabled ? "ON" : "OFF"} $formattedTime, '
       'mask=0x${repeatMask.toRadixString(16).padLeft(2, '0')}, '
-      'action=${action.name})';
+      'actionMask=0x${actionMask.toRadixString(2).padLeft(3, '0')})';
 }

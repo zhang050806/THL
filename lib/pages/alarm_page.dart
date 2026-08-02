@@ -25,7 +25,7 @@ class AlarmPage extends StatefulWidget {
   State<AlarmPage> createState() => _AlarmPageState();
 }
 
-class _AlarmPageState extends State<AlarmPage> {
+class _AlarmPageState extends State<AlarmPage> with WidgetsBindingObserver {
   /// 闹钟列表
   final List<AlarmModel> _alarms = [];
 
@@ -50,8 +50,15 @@ class _AlarmPageState extends State<AlarmPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadAlarms();
     _checkBleAndSync();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   /// 从 SharedPreferences 加载闹钟数据（本地缓存）。
@@ -250,7 +257,6 @@ class _AlarmPageState extends State<AlarmPage> {
         ? TimeOfDay(hour: existing.hour, minute: existing.minute)
         : const TimeOfDay(hour: 8, minute: 0);
     int initialRepeatMask = existing?.repeatMask ?? 0x00;
-    AlarmAction initialAction = existing?.action ?? AlarmAction.buzzer;
 
     final result = await showModalBottomSheet<_AlarmSheetResult>(
       context: context,
@@ -259,7 +265,6 @@ class _AlarmPageState extends State<AlarmPage> {
       builder: (_) => _AlarmSheet(
         initialTime: initialTime,
         initialRepeatMask: initialRepeatMask,
-        initialAction: initialAction,
       ),
     );
 
@@ -272,7 +277,7 @@ class _AlarmPageState extends State<AlarmPage> {
         hour: result.time.hour,
         minute: result.time.minute,
         repeatMask: result.repeatMask,
-        action: result.action,
+        actionMask: 0x00,
       );
 
       if (existingIndex != null) {
@@ -578,30 +583,27 @@ class _AlarmPageState extends State<AlarmPage> {
     );
   }
 
-  /// 构建闹钟副标题：重复规则 + 触发动作。
+  /// 构建闹钟副标题：重复规则。
   String _buildAlarmSubtitle(AlarmModel alarm, AppLocalizations l10n) {
-    final isEn = l10n.isEnglish;
-
     // 重复规则描述
     String repeatDesc;
     if (alarm.isOnce) {
       repeatDesc = l10n.alarmRepeatOnce;
     } else if (alarm.isEveryDay) {
+      final isEn = l10n.isEnglish;
       repeatDesc = isEn ? 'Every day' : '每天';
     } else if (alarm.isWeekday) {
       repeatDesc = l10n.alarmRepeatWeekdayShort;
     } else {
       final days = alarm.activeDays;
+      final isEn = l10n.isEnglish;
       final names = days
           .map((d) => isEn ? AlarmModel.dayShortEn(d) : AlarmModel.dayShortZh(d))
           .toList();
       repeatDesc = names.join(l10n.alarmDaySeparator);
     }
 
-    // 动作描述
-    final actionDesc = isEn ? alarm.action.nameEn : alarm.action.nameZh;
-
-    return '$repeatDesc  |  $actionDesc';
+    return repeatDesc;
   }
 
   /// 编辑模式底部批量删除栏。
@@ -658,33 +660,27 @@ class _AlarmPageState extends State<AlarmPage> {
 class _AlarmSheetResult {
   final TimeOfDay time;
   final int repeatMask;
-  final AlarmAction action;
 
   const _AlarmSheetResult({
     required this.time,
     required this.repeatMask,
-    required this.action,
   });
 }
 
 // ============================================================
-//  闹钟设置底部面板（四步流程）
+//  闹钟设置底部面板（三步流程）
 // ============================================================
 
-/// 四步闹钟设置流程：
+/// 两步闹钟设置流程：
 ///   Step 0：选择时间
-///   Step 1：选择重复模式（单次 / 每天 / 仅工作日 / 自定义）
-///   Step 2：自定义日期选择（仅当选择了"自定义"时）
-///   Step 3：触发动作选择
+///   Step 1：选择重复模式（单次 / 每天 / 仅工作日 / 自定义及日期选择）
 class _AlarmSheet extends StatefulWidget {
   final TimeOfDay initialTime;
   final int initialRepeatMask;
-  final AlarmAction initialAction;
 
   const _AlarmSheet({
     required this.initialTime,
     required this.initialRepeatMask,
-    required this.initialAction,
   });
 
   @override
@@ -696,9 +692,8 @@ class _AlarmSheetState extends State<_AlarmSheet> {
 
   late TimeOfDay _selectedTime;
   late int _repeatMask;
-  late AlarmAction _selectedAction;
 
-  /// 用于 Step 1/2 的重复模式选择辅助状态。
+  /// 用于 Step 1 的重复模式选择辅助状态。
   _RepeatMode _mode = _RepeatMode.once;
   Set<int> _customDays = {};
 
@@ -707,7 +702,6 @@ class _AlarmSheetState extends State<_AlarmSheet> {
     super.initState();
     _selectedTime = widget.initialTime;
     _repeatMask = widget.initialRepeatMask;
-    _selectedAction = widget.initialAction;
 
     // 从 repeatMask 恢复模式
     if (_repeatMask == 0x00) {
@@ -772,10 +766,6 @@ class _AlarmSheetState extends State<_AlarmSheet> {
         return _buildTimeStep();
       case 1:
         return _buildRepeatStep(l10n);
-      case 2:
-        return _buildDaysStep(l10n);
-      case 3:
-        return _buildActionStep(l10n);
       default:
         return const SizedBox.shrink();
     }
@@ -876,8 +866,6 @@ class _AlarmSheetState extends State<_AlarmSheet> {
   // -------------------------
 
   Widget _buildRepeatStep(AppLocalizations l10n) {
-    final isEn = l10n.isEnglish;
-
     return Column(
       children: [
         const SizedBox(height: 12),
@@ -897,15 +885,15 @@ class _AlarmSheetState extends State<_AlarmSheet> {
         ),
         const SizedBox(height: 10),
         _repeatOption(
-          title: isEn ? 'Every day' : '每天',
-          isSelected: _mode == _RepeatMode.everyDay,
-          onTap: () => setState(() => _mode = _RepeatMode.everyDay),
-        ),
-        const SizedBox(height: 10),
-        _repeatOption(
           title: l10n.alarmRepeatWeekday,
           isSelected: _mode == _RepeatMode.weekday,
           onTap: () => setState(() => _mode = _RepeatMode.weekday),
+        ),
+        const SizedBox(height: 10),
+        _repeatOption(
+          title: l10n.isEnglish ? 'Every day' : '每天',
+          isSelected: _mode == _RepeatMode.everyDay,
+          onTap: () => setState(() => _mode = _RepeatMode.everyDay),
         ),
         const SizedBox(height: 10),
         _repeatOption(
@@ -913,8 +901,78 @@ class _AlarmSheetState extends State<_AlarmSheet> {
           isSelected: _mode == _RepeatMode.custom,
           onTap: () => setState(() => _mode = _RepeatMode.custom),
         ),
+        if (_mode == _RepeatMode.custom) ...[
+          const SizedBox(height: 16),
+          Text(
+            l10n.alarmSelectDays,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...List.generate(7, (i) => i + 1).map((day) => _buildDayOption(day, l10n)),
+        ],
         const SizedBox(height: 16),
       ],
+    );
+  }
+
+  Widget _buildDayOption(int day, AppLocalizations l10n) {
+    final isEn = l10n.isEnglish;
+    final isSelected = _customDays.contains(day);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 3),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            if (isSelected) {
+              _customDays.remove(day);
+            } else {
+              _customDays.add(day);
+            }
+          });
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? Theme.of(context).colorScheme.primaryContainer
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+            border: isSelected
+                ? Border.all(
+                    color: Theme.of(context).colorScheme.primary, width: 1.5)
+                : Border.all(color: Colors.transparent),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  isEn
+                      ? AlarmModel.dayFullEn(day)
+                      : AlarmModel.dayFullZh(day),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+              ),
+              if (isSelected)
+                Icon(
+                  Icons.check_circle,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 22,
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -969,208 +1027,15 @@ class _AlarmSheetState extends State<_AlarmSheet> {
   }
 
   // -------------------------
-  //  Step 2: 自定义日期选择
-  // -------------------------
-
-  Widget _buildDaysStep(AppLocalizations l10n) {
-    final isEn = l10n.isEnglish;
-    final days = List.generate(7, (i) => i + 1);
-
-    return Column(
-      children: [
-        const SizedBox(height: 12),
-        Text(
-          l10n.alarmSelectDays,
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 16),
-        ...days.map((day) {
-          final isSelected = _customDays.contains(day);
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 3),
-            child: InkWell(
-              onTap: () {
-                setState(() {
-                  if (isSelected) {
-                    _customDays.remove(day);
-                  } else {
-                    _customDays.add(day);
-                  }
-                });
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? Theme.of(context).colorScheme.primaryContainer
-                      : Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                  border: isSelected
-                      ? Border.all(
-                          color: Theme.of(context).colorScheme.primary,
-                          width: 1.5)
-                      : Border.all(color: Colors.transparent),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        isEn
-                            ? AlarmModel.dayFullEn(day)
-                            : AlarmModel.dayFullZh(day),
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                          color: isSelected
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                    if (isSelected)
-                      Icon(
-                        Icons.check_circle,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 22,
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }),
-        const SizedBox(height: 16),
-      ],
-    );
-  }
-
-  // -------------------------
-  //  Step 3: 触发动作选择
-  // -------------------------
-
-  Widget _buildActionStep(AppLocalizations l10n) {
-    final isEn = l10n.isEnglish;
-    final actions = AlarmAction.values;
-
-    return Column(
-      children: [
-        const SizedBox(height: 12),
-        Text(
-          l10n.alarmSelectAction,
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 16),
-        ...actions.map((action) {
-          final isSelected = _selectedAction == action;
-          final iconData = _actionIcon(action);
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 3),
-            child: InkWell(
-              onTap: () => setState(() => _selectedAction = action),
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? Theme.of(context).colorScheme.primaryContainer
-                      : Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                  border: isSelected
-                      ? Border.all(
-                          color: Theme.of(context).colorScheme.primary,
-                          width: 1.5)
-                      : Border.all(color: Colors.transparent),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      iconData,
-                      size: 22,
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        isEn ? action.nameEn : action.nameZh,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                          color: isSelected
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                    if (isSelected)
-                      Icon(
-                        Icons.check_circle,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 22,
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }),
-        const SizedBox(height: 16),
-      ],
-    );
-  }
-
-  /// 触发动作对应的图标。
-  IconData _actionIcon(AlarmAction action) {
-    switch (action) {
-      case AlarmAction.rgbLight:
-        return Icons.lightbulb_outline;
-      case AlarmAction.wirelessFastCharge:
-        return Icons.battery_charging_full;
-      case AlarmAction.buzzer:
-        return Icons.notifications_active;
-      case AlarmAction.combo:
-        return Icons.auto_awesome;
-    }
-  }
-
-  // -------------------------
   //  底部按钮
   // -------------------------
 
   Widget _buildBottomButtons(AppLocalizations l10n) {
-    // 判断最后一步
-    bool isLastStep;
-    if (_step == 1 && _mode != _RepeatMode.custom) {
-      // Step 1 选了非自定义 → 跳到 Step 3
-      isLastStep = false;
-    } else if (_step == 2 || (_step == 1 && _mode != _RepeatMode.custom)) {
-      isLastStep = false;
-    } else if (_step == 3) {
-      isLastStep = true;
-    } else {
-      isLastStep = false;
-    }
-
+    final isLastStep = _step == 1;
     final prevEnabled = _step > 0;
 
-    // 自定义模式下 Step 2 未选日期则禁用下一步
-    final nextEnabled = !(_step == 2 && _customDays.isEmpty) && _step != 0;
+    // Step 1 自定义模式下未选日期则禁用下一步
+    final nextEnabled = !(_step == 1 && _mode == _RepeatMode.custom && _customDays.isEmpty);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1198,43 +1063,49 @@ class _AlarmSheetState extends State<_AlarmSheet> {
                   ? Theme.of(context).colorScheme.primary
                   : Theme.of(context).colorScheme.outline,
               onPressed: prevEnabled
-                  ? () => setState(() {
-                        if (_step == 3 && _mode != _RepeatMode.custom) {
-                          _step = 1;
-                        } else {
-                          _step--;
-                        }
-                      })
+                  ? () => setState(() => _step--)
                   : null,
             ),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: _pillButton(
-              label: isLastStep ? l10n.alarmConfirm : l10n.alarmNext,
+              label: isLastStep ? l10n.alarmSave : l10n.alarmNext,
               enabled: isLastStep ? true : nextEnabled,
               onPressed: () {
                 if (isLastStep) {
+                  final repeatMask = _computeRepeatMask();
+                  // 仅今天闹钟校验时间不能早于当前时间
+                  if (repeatMask == 0x00) {
+                    final now = DateTime.now();
+                    final nowMinutes = now.hour * 60 + now.minute;
+                    final alarmMinutes = _selectedTime.hour * 60 + _selectedTime.minute;
+                    if (alarmMinutes <= nowMinutes) {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: Text(l10n.alarmTimePassedTitle),
+                          content: Text(l10n.alarmTimePassed),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: Text(l10n.alarmTimePassedOk),
+                            ),
+                          ],
+                        ),
+                      );
+                      return;
+                    }
+                  }
                   Navigator.pop(
                     context,
                     _AlarmSheetResult(
                       time: _selectedTime,
-                      repeatMask: _computeRepeatMask(),
-                      action: _selectedAction,
+                      repeatMask: repeatMask,
                     ),
                   );
                 } else {
-                  setState(() {
-                    if (_step == 1) {
-                      if (_mode == _RepeatMode.custom) {
-                        _step = 2; // 进入自定义日期选择
-                      } else {
-                        _step = 3; // 跳过 Step 2，直接到动作选择
-                      }
-                    } else if (_step == 2) {
-                      _step = 3;
-                    }
-                  });
+                  setState(() => _step = 1);
                 }
               },
             ),
